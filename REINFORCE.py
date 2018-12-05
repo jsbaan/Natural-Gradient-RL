@@ -20,17 +20,21 @@ class REINFORCE():
         action = torch.multinomial(log_p.exp(),1).item()
         return action, log_p[action]
 
-    def run_episode(self,env):
+    def run_episode(self, env, discount_factor):
         s = env.reset()
         done = False
         episode = []
         r_list = []
+        G = 0
+        steps = 0
         while not done:
             a, log_p = self.select_action(s)
             s_next, r, done, _ = env.step(a)
             episode.append((s,a,log_p,r,s_next))
             s = s_next
-        return episode
+            G += r * discount_factor**steps
+            steps += 1
+        return episode, G
 
     def compute_reinforce_loss(self,episode, discount_factor):
         returns = torch.zeros(len(episode))
@@ -48,16 +52,20 @@ class REINFORCE():
         loss = - torch.sum(returns * a_probs)
         return loss
 
-    def run_episodes_policy_gradient(self, env, num_episodes, discount_factor):
-        optimizer = optim.Adam(self.policy.parameters(), self.learn_rate)
+    def run_episodes_policy_gradient(self, env, num_episodes, discount_factor, optimizer):
 
-        episode_durations = []
+        episode_returns = []
+        total_loss = 0
         for i in range(num_episodes):
             # Run episode
-            episode = self.run_episode(env)
+            episode, G = self.run_episode(env, discount_factor)
 
             # Compute loss
             loss = self.compute_reinforce_loss(episode, discount_factor)
+
+            # total_loss += loss
+            # if i % 10 ==0:
+            #     print(total_loss/(i+1))
 
             # Train network
             optimizer.zero_grad()
@@ -65,8 +73,8 @@ class REINFORCE():
             optimizer.step()
 
             if i % 10 == 0:
-                print("{2} Episode {0} finished after {1} steps"
-                      .format(i, len(episode), '\033[92m' if len(episode) >= 195 else '\033[99m'))
-            episode_durations.append(len(episode))
+                print("Episode {0} finished with {1} return"
+                      .format(i, G))
+            episode_returns.append(G)
 
-        return episode_durations
+        return episode_returns

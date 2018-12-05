@@ -23,6 +23,6 @@ class Helper():
             s = s_next
         return episode
 
-    def smooth(x, N):
+    def smooth(self,x, N):
         cumsum = np.cumsum(np.insert(x, 0, 0))
         return (cumsum[N:] - cumsum[:-N]) / float(N)
