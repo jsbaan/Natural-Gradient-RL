@@ -50,15 +50,15 @@ def run_reinforce(env_name):
         NG_results[t] = episode_returns_policy_gradient_NG
         NG_loss[t] = loss_NG
 
-        env.close()
+
         ## VANILLA GRADIENT
-        model = PolicyNetwork(num_states, num_actions, num_hidden)
-        reinforce = REINFORCE(model,learn_rate)
-        optimizer_VG = torch.optim.SGD(model.parameters(), learn_rate)
+        model_VG = PolicyNetwork(num_states, num_actions, num_hidden)
+        reinforce = REINFORCE(model_VG,learn_rate)
+        optimizer_VG = torch.optim.SGD(model_VG.parameters(), learn_rate)
         episode_returns_policy_gradient_VG, loss_SGD = reinforce.run_episodes_policy_gradient(
         env, num_episodes, discount_factor, optimizer_VG)
+        SGD_results[t] = episode_returns_policy_gradient_VG
         SGD_loss[t] = loss_SGD
-        env.close()
 
     # Calculating average per episode
     average_return_SGD = np.mean(SGD_results, axis=0)
