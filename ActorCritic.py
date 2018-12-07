@@ -68,8 +68,8 @@ class ActorCritic():
         step_losses = []  # Keep track of losses for plotting
         for i in range(max_steps):
 
-            if i % 100 == 0:
-                print(f"Step {i}, finished {len(episode_durations)} / {max_episodes} episodes, average episode duration of last 100 episodes: {np.mean(episode_durations[-100:])}")
+            # if i % 100 == 0:
+            #     print(f"Step {i}, finished {len(episode_durations)} / {max_episodes} episodes, average episode duration of last 100 episodes: {np.mean(episode_durations[-100:])}")
 
             action, log_ps = self.select_action(state)
             next_state, reward, done, _ = zip(*[env.step(a.item()) for env, a in zip(envs, action)])

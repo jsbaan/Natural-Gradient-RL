@@ -55,6 +55,7 @@ class REINFORCE():
     def run_episodes_policy_gradient(self, env, num_episodes, discount_factor, optimizer):
 
         episode_returns = []
+        losses = []
         total_loss = 0
         for i in range(num_episodes):
             # Run episode
@@ -76,5 +77,5 @@ class REINFORCE():
                 print("Episode {0} finished with {1} return"
                       .format(i, G))
             episode_returns.append(G)
-
-        return episode_returns
+            losses.append(loss)
+        return episode_returns, losses

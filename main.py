@@ -13,14 +13,14 @@ from SGD_NG import SGD
 helper = Helper()
 # Create environment
 env_name = "CartPole-v0"
-
+NUMBER_OF_RUNS = 10
 
 def run_reinforce(env_name):
     # Define parameters
     env = gym.envs.make(env_name)
     num_actions = env.action_space.n
     num_states = env.reset().shape[0]
-    num_episodes = 300
+    num_episodes = 25
     num_hidden = 128
     discount_factor = 0.99
     learn_rate = 0.01
@@ -31,38 +31,72 @@ def run_reinforce(env_name):
     print("Number of states: ", num_states)
     print("Number of actions: ", num_actions)
 
+    ## Save stats
+    SGD_results = np.zeros((NUMBER_OF_RUNS, num_episodes))
+    NG_results = np.zeros((NUMBER_OF_RUNS, num_episodes))
+    SGD_loss = np.zeros((NUMBER_OF_RUNS, num_episodes))
+    NG_loss = np.zeros((NUMBER_OF_RUNS, num_episodes))
+
     # Initialize policy
-    model = PolicyNetwork(num_states, num_actions, num_hidden)
-    reinforce = REINFORCE(model,learn_rate)
+    for t in range(NUMBER_OF_RUNS):
+        model = PolicyNetwork(num_states, num_actions, num_hidden)
+        reinforce = REINFORCE(model,learn_rate)
 
-    # Natural gradient
-    optimizer_NG = SGD(model.parameters(), learn_rate)
-    # Perform REINFORCE on environment
-    episode_returns_policy_gradient_NG = reinforce.run_episodes_policy_gradient(
-        env, num_episodes, discount_factor, optimizer_NG)
+        # Natural gradient
+        optimizer_NG = SGD(model.parameters(), learn_rate)
+        # Perform REINFORCE on environment
+        episode_returns_policy_gradient_NG, loss_NG = reinforce.run_episodes_policy_gradient(
+            env, num_episodes, discount_factor, optimizer_NG)
+        NG_results[t] = episode_returns_policy_gradient_NG
+        NG_loss[t] = loss_NG
 
-    ## VANILLA GRADIENT
-    model = PolicyNetwork(num_states, num_actions, num_hidden)
-    reinforce = REINFORCE(model,learn_rate)
-    optimizer_VG = torch.optim.SGD(model.parameters(), learn_rate)
-    episode_returns_policy_gradient_VG = reinforce.run_episodes_policy_gradient(
+        env.close()
+        ## VANILLA GRADIENT
+        model = PolicyNetwork(num_states, num_actions, num_hidden)
+        reinforce = REINFORCE(model,learn_rate)
+        optimizer_VG = torch.optim.SGD(model.parameters(), learn_rate)
+        episode_returns_policy_gradient_VG, loss_SGD = reinforce.run_episodes_policy_gradient(
         env, num_episodes, discount_factor, optimizer_VG)
+        SGD_loss[t] = loss_SGD
+        env.close()
 
-    ## Adam
-    model = PolicyNetwork(num_states, num_actions, num_hidden)
-    reinforce = REINFORCE(model,learn_rate)
-    optimizer_VG = torch.optim.Adam(model.parameters(), learn_rate)
-    episode_returns_policy_gradient_adam = reinforce.run_episodes_policy_gradient(
-        env, num_episodes, discount_factor, optimizer_VG)
+    # Calculating average per episode
+    average_return_SGD = np.mean(SGD_results, axis=0)
+    var_return_SGD = np.std(SGD_results, axis=0)
+
+    average_return_NG = np.mean(NG_results, axis=0)
+    var_return_NG = np.std(NG_results, axis=0)
+
+    average_loss_SGD = np.mean(SGD_loss, axis=0)
+    var_loss_SGD = np.std(SGD_loss, axis=0)
+
+    average_loss_NG = np.mean(NG_loss, axis=0)  
+    var_loss_NG = np.std(NG_loss, axis=0)
+
+
+
+    # ## Adam
+    # model = PolicyNetwork(num_states, num_actions, num_hidden)
+    # reinforce = REINFORCE(model,learn_rate)
+    # optimizer_VG = torch.optim.Adam(model.parameters(), learn_rate)
+    # episode_returns_policy_gradient_adam = reinforce.run_episodes_policy_gradient(
+    #     env, num_episodes, discount_factor, optimizer_VG)
 
     # Plot loss
-    plt.plot(helper.smooth(episode_returns_policy_gradient_NG, 10))
-    plt.plot(helper.smooth(episode_returns_policy_gradient_VG, 10))
-    plt.plot(helper.smooth(episode_returns_policy_gradient_adam, 10))
+    plt.plot(average_return_NG, color="red")
+    plt.fill_between(np.arange(num_episodes), average_return_NG - var_return_NG, average_return_NG + var_return_NG, color="red", alpha=0.2)
+    plt.plot(average_return_SGD, color="blue")
+    plt.fill_between(np.arange(num_episodes), average_return_SGD - var_return_SGD, average_return_SGD + var_return_SGD, color="blue", alpha=0.2)
 
-    plt.title('Episode returns per episode')
-    plt.legend(['Natural Policy gradient (SGD)', 'Vanilla Policy Gradient (SGD)', 'Adam'])
+    plt.title('Average Episode returns and loss per episode')
+    plt.legend(['Return Natural Policy gradient (SGD)', ' Return Vanilla Policy Gradient (SGD)'])
     plt.show()
+
+    """
+    plt.plot(average_loss_SGD, color="red", linestyle='dashed')
+    plt.plot(average_loss_NG, color="blue", linestyle='dashed')"""
+
+    
 
 
 def run_actorcritic(env_name):
@@ -90,5 +124,4 @@ def run_actorcritic(env_name):
         envs, max_episodes, max_steps, discount_factor)
 
 
-# run_actorcritic(env_name)
 run_reinforce(env_name)
