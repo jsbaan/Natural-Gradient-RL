@@ -9,6 +9,7 @@ import time
 from matplotlib import pyplot as plt
 import numpy as np
 from helper import Helper
+from NaturalGD import NaturalGD
 helper = Helper()
 # Create environment
 env_name = "CartPole-v0"
@@ -27,10 +28,13 @@ def run_reinforce(env_name):
     env.seed(seed)
 
     # Initialize policy
-    model = PolicyNetwork(num_hidden)
-    reinforce = REINFORCE(model,learn_rate)
+    policy = PolicyNetwork(num_hidden)
+
+    # Define optimizer
+    optimizer = NaturalGD(policy.parameters(),lr = learn_rate)
 
     # Perform REINFORCE on environment
+    reinforce = REINFORCE(policy, optimizer)
     episode_durations_policy_gradient = reinforce.run_episodes_policy_gradient(
         env, num_episodes, discount_factor)
 

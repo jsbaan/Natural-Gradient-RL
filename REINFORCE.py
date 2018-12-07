@@ -9,9 +9,9 @@ from torch import optim
 from tqdm import tqdm as _tqdm
 
 class REINFORCE():
-    def __init__(self,policy,learn_rate):
+    def __init__(self,policy, optimizer):
         self.policy = policy
-        self.learn_rate = learn_rate
+        self.optimizer = optimizer
 
     def select_action(self, state):
         # Samples an action according to the probability distribution induced by the model
@@ -49,8 +49,6 @@ class REINFORCE():
         return loss
 
     def run_episodes_policy_gradient(self, env, num_episodes, discount_factor):
-        optimizer = optim.Adam(self.policy.parameters(), self.learn_rate)
-
         episode_durations = []
         for i in range(num_episodes):
             # Run episode
@@ -60,9 +58,9 @@ class REINFORCE():
             loss = self.compute_reinforce_loss(episode, discount_factor)
 
             # Train network
-            optimizer.zero_grad()
+            self.optimizer.zero_grad()
             loss.backward()
-            optimizer.step()
+            self.optimizer.step()
 
             if i % 10 == 0:
                 print("{2} Episode {0} finished after {1} steps"
