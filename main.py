@@ -13,14 +13,14 @@ from SGD_NG import SGD
 helper = Helper()
 # Create environment
 env_name = "CartPole-v0"
-NUMBER_OF_RUNS = 10
+NUMBER_OF_RUNS = 20
 
 def run_reinforce(env_name):
     # Define parameters
     env = gym.envs.make(env_name)
     num_actions = env.action_space.n
     num_states = env.reset().shape[0]
-    num_episodes = 25
+    num_episodes = 300
     num_hidden = 128
     discount_factor = 0.99
     learn_rate = 0.01
