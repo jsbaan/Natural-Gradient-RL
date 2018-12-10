@@ -50,7 +50,7 @@ class SGD(Optimizer):
 
     def __init__(self, params, lr=required, momentum=0, dampening=0,
                  weight_decay=0, nesterov=False):
-        self.F_sum = None
+        self.f_sum = None
         self.N = 0
         if lr is not required and lr < 0.0:
             raise ValueError("Invalid learning rate: {}".format(lr))
@@ -80,55 +80,37 @@ class SGD(Optimizer):
         loss = None
         if closure is not None:
             loss = closure()
-        counter = 0
-        for group in self.param_groups:
 
-            weight_decay = group['weight_decay']
-            momentum = group['momentum']
-            dampening = group['dampening']
-            nesterov = group['nesterov']
+        for group in self.param_groups:
             gradients = []
             parameters = []
-            total_length = 0
+
+            # Convert gradients and parameters to single vector
             for p in group['params']:
                 gradients.append(p.grad.data.reshape(-1, 1))
                 parameters.append(p.data.reshape(-1, 1))
             parameter_vector = torch.cat(parameters, 0)
-            gradient_vector  = torch.cat(gradients, 0)
-            noise = torch.eye(gradient_vector.shape[0]) * 1e-3
-            fisher = torch.mm(gradient_vector, gradient_vector.t())
+            gradient_vector = torch.cat(gradients, 0)
+
+            # Add robustifying constant
+            robust_c = torch.eye(gradient_vector.shape[0]) * 1e-3
+            fisher_sample = torch.mm(gradient_vector, gradient_vector.t())
             if self.N == 0:
-                self.F_sum = fisher
+                self.f_sum = fisher_sample
             else:
-                self.F_sum += fisher
+                self.f_sum += fisher_sample
             self.N += 1
-            fisher_inverse = (self.F_sum/self.N + noise).inverse()
+
+            # use f_sum/N as consistent estimate for F
+            fisher_inverse = (self.f_sum/self.N + robust_c).inverse()
             parameter_vector = parameter_vector.squeeze(1)
             scaled_grad = torch.mm(fisher_inverse, gradient_vector).squeeze(1)
-            gradient_vector = gradient_vector.squeeze(1)
 
             updated_weight = parameter_vector - group['lr'] * scaled_grad
             current_position = 0
             for p in group['params']:
-                # if p.grad is None:
-                #     continue
-                # d_p = p.grad.data
-                # if weight_decay != 0:
-                #     d_p.add_(weight_decay, p.data)
-                # if momentum != 0:
-                #     param_state = self.state[p]
-                #     if 'momentum_buffer' not in param_state:
-                #         buf = param_state['momentum_buffer'] = torch.zeros_like(p.data)
-                #         buf.mul_(momentum).add_(d_p)
-                #     else:
-                #         buf = param_state['momentum_buffer']
-                #         buf.mul_(momentum).add_(1 - dampening, d_p)
-                #     if nesterov:
-                #         d_p = d_p.add(momentum, buf)
-                #     else:
-                #         d_p = buf
                 current_shape = np.prod(p.data.shape)
-
+                # update weights
                 p.data = updated_weight[current_position: current_position + current_shape].reshape(p.data.shape)
                 current_position = current_position + current_shape
         return loss
