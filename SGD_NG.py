@@ -2,7 +2,7 @@ import torch
 from torch.optim.optimizer import Optimizer, required
 import numpy as np
 import sys
-class SGD(Optimizer):
+class SGD_NG(Optimizer):
     """Implements stochastic gradient descent (optionally with momentum).
 
     Nesterov momentum is based on the formula from
@@ -63,7 +63,7 @@ class SGD(Optimizer):
                         weight_decay=weight_decay, nesterov=nesterov)
         if nesterov and (momentum <= 0 or dampening != 0):
             raise ValueError("Nesterov momentum requires a momentum and zero dampening")
-        super(SGD, self).__init__(params, defaults)
+        super(SGD_NG, self).__init__(params, defaults)
 
     def __setstate__(self, state):
         super(SGD, self).__setstate__(state)
