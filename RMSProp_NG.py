@@ -95,7 +95,7 @@ class RMSProp_NG(Optimizer):
                     continue
 
                 if self.ng:
-                    p_len = p.data.numel()#np.prod(p.data.shape)
+                    p_len = p.data.numel()
                     grad = natural_grad[i: i + p_len].reshape(p.data.shape)
                     i += p_len
                 else:

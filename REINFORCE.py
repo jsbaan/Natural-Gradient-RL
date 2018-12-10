@@ -72,7 +72,7 @@ class REINFORCE():
             loss.backward()
             self.optimizer.step()
 
-            if i % 10 == 0:
+            if i % 50 == 0:
                 print("Episode {0} finished with {1} return"
                       .format(i, G))
             episode_returns.append(G)
