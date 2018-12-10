@@ -66,7 +66,7 @@ class SGD_NG(Optimizer):
         super(SGD_NG, self).__init__(params, defaults)
 
     def __setstate__(self, state):
-        super(SGD, self).__setstate__(state)
+        super(SGD_NG, self).__setstate__(state)
         for group in self.param_groups:
             group.setdefault('nesterov', False)
 
@@ -82,13 +82,39 @@ class SGD_NG(Optimizer):
             loss = closure()
 
         for group in self.param_groups:
-            gradients = []
-            parameters = []
+            weight_decay = group['weight_decay']
+            momentum = group['momentum']
+            dampening = group['dampening']
+            nesterov = group['nesterov']
 
             # Convert gradients and parameters to single vector
+            gradients = []
+            parameters = []
             for p in group['params']:
-                gradients.append(p.grad.data.reshape(-1, 1))
+                if p.grad is None:
+                    continue
+
+                d_p = p.grad.data
+
+                # Perform momentum or nesterov on gradients
+                if weight_decay != 0:
+                    d_p.add_(weight_decay, p.data)
+                if momentum != 0:
+                    param_state = self.state[p]
+                    if 'momentum_buffer' not in param_state:
+                        buf = param_state['momentum_buffer'] = torch.zeros_like(p.data)
+                        buf.mul_(momentum).add_(d_p)
+                    else:
+                        buf = param_state['momentum_buffer']
+                        buf.mul_(momentum).add_(1 - dampening, d_p)
+                    if nesterov:
+                        d_p = d_p.add(momentum, buf)
+                    else:
+                        d_p = buf
+
+                gradients.append(d_p.reshape(-1, 1))
                 parameters.append(p.data.reshape(-1, 1))
+
             parameter_vector = torch.cat(parameters, 0)
             gradient_vector = torch.cat(gradients, 0)
 
@@ -107,10 +133,10 @@ class SGD_NG(Optimizer):
             scaled_grad = torch.mm(fisher_inverse, gradient_vector).squeeze(1)
 
             updated_weight = parameter_vector - group['lr'] * scaled_grad
-            current_position = 0
+            i = 0
             for p in group['params']:
-                current_shape = np.prod(p.data.shape)
+                p_len = np.prod(p.data.shape)
                 # update weights
-                p.data = updated_weight[current_position: current_position + current_shape].reshape(p.data.shape)
-                current_position = current_position + current_shape
+                p.data = updated_weight[i: i + p_len].reshape(p.data.shape)
+                i += p_len
         return loss

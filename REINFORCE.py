@@ -12,9 +12,9 @@ seed = 20
 torch.manual_seed(seed)
 
 class REINFORCE():
-    def __init__(self, policy, learn_rate):
+    def __init__(self, policy, optimizer):
         self.policy = policy
-        self.learn_rate = learn_rate
+        self.optimizer = optimizer
 
     def select_action(self, state):
         # Samples an action according to the probability distribution induced by the model
@@ -56,7 +56,7 @@ class REINFORCE():
         loss = - torch.sum(returns * a_probs)
         return loss
 
-    def run_episodes_policy_gradient(self, env, num_episodes, discount_factor, optimizer):
+    def run_episodes_policy_gradient(self, env, num_episodes, discount_factor):
 
         episode_returns = []
         total_loss = 0
@@ -68,9 +68,9 @@ class REINFORCE():
             loss = self.compute_reinforce_loss(episode, discount_factor)
 
             # Train network
-            optimizer.zero_grad()
+            self.optimizer.zero_grad()
             loss.backward()
-            optimizer.step()
+            self.optimizer.step()
 
             if i % 10 == 0:
                 print("Episode {0} finished with {1} return"
