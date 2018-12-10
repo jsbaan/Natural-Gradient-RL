@@ -102,7 +102,7 @@ class SGD(Optimizer):
             else:
                 self.F_sum += fisher
             self.N += 1
-            fisher_inverse = (self.F_sum/self.N + noise).inverse()
+            fisher_inverse = ((self.F_sum+noise)/self.N).inverse()
             parameter_vector = parameter_vector.squeeze(1)
             scaled_grad = torch.mm(fisher_inverse, gradient_vector).squeeze(1)
             gradient_vector = gradient_vector.squeeze(1)
