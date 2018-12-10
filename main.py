@@ -10,6 +10,8 @@ from matplotlib import pyplot as plt
 import numpy as np
 from helper import Helper
 from SGD_NG import SGD_NG
+from RMSProp_NG import RMSProp_NG
+from torch.optim import RMSprop
 helper = Helper()
 # Create environment
 env_name = "CartPole-v0"
@@ -20,48 +22,72 @@ def run_reinforce(env_name):
     env = gym.envs.make(env_name)
     num_actions = env.action_space.n
     num_states = env.reset().shape[0]
-    num_episodes = 300
-    num_hidden = 128
+    num_episodes = 100
+    num_hidden = 64
     discount_factor = 0.99
-    learn_rate = 0.01
-    seed = 42
+    learn_rate_ng = 0.01
+    learn_rate_vg = 0.001
+    learn_rate_adam = 0.01
+    learn_rate_rms = 0.005
+    learn_rate_rmsng = 0.001
+
+
+    seed = 45
     random.seed(seed)
     torch.manual_seed(seed)
     env.seed(seed)
     print("Number of states: ", num_states)
     print("Number of actions: ", num_actions)
 
-    # Initialize policy
+    ## Natural GD
     model = PolicyNetwork(num_states, num_actions, num_hidden)
-    reinforce = REINFORCE(model,learn_rate)
-
-    # Natural gradient
-    optimizer_NG = SGD_NG(model.parameters(), learn_rate)
-    # Perform REINFORCE on environment
+    optimizer_NG = SGD_NG(model.parameters(), learn_rate_ng)
+    reinforce = REINFORCE(model,optimizer_NG)
     episode_returns_policy_gradient_NG = reinforce.run_episodes_policy_gradient(
-        env, num_episodes, discount_factor, optimizer_NG)
+        env, num_episodes, discount_factor)
 
-    ## VANILLA GRADIENT
+    ## Vanilla SGD
     model = PolicyNetwork(num_states, num_actions, num_hidden)
-    reinforce = REINFORCE(model,learn_rate)
-    optimizer_VG = torch.optim.SGD(model.parameters(), learn_rate)
+    optimizer_VG = torch.optim.SGD(model.parameters(), learn_rate_vg)
+    reinforce = REINFORCE(model,optimizer_VG)
     episode_returns_policy_gradient_VG = reinforce.run_episodes_policy_gradient(
-        env, num_episodes, discount_factor, optimizer_VG)
+        env, num_episodes, discount_factor)
 
     ## Adam
+    print('Adam...')
     model = PolicyNetwork(num_states, num_actions, num_hidden)
-    reinforce = REINFORCE(model,learn_rate)
-    optimizer_VG = torch.optim.Adam(model.parameters(), learn_rate)
+    optimizer_ADAM = torch.optim.Adam(model.parameters(), learn_rate_adam)
+    reinforce = REINFORCE(model,optimizer_ADAM)
     episode_returns_policy_gradient_adam = reinforce.run_episodes_policy_gradient(
-        env, num_episodes, discount_factor, optimizer_VG)
+        env, num_episodes, discount_factor)
+
+    ## RMSProp Vanilla
+    print('RMSProp Vanilla...')
+    model = PolicyNetwork(num_states, num_actions, num_hidden)
+    optimizer_RMS = RMSprop(model.parameters(), learn_rate_rms)
+    reinforce = REINFORCE(model,optimizer_RMS)
+    episode_returns_policy_gradient_rms = reinforce.run_episodes_policy_gradient(
+        env, num_episodes, discount_factor)
+
+    ## RMSProp NG
+    print('RMSProp NG...')
+    model = PolicyNetwork(num_states, num_actions, num_hidden)
+    optimizer_RMSNG = RMSProp_NG(model.parameters(), learn_rate_rmsng,ng=True)
+    reinforce = REINFORCE(model,optimizer_RMSNG)
+    episode_returns_policy_gradient_rmsng = reinforce.run_episodes_policy_gradient(
+        env, num_episodes, discount_factor)
 
     # Plot loss
     plt.plot(helper.smooth(episode_returns_policy_gradient_NG, 10))
     plt.plot(helper.smooth(episode_returns_policy_gradient_VG, 10))
     plt.plot(helper.smooth(episode_returns_policy_gradient_adam, 10))
+    plt.plot(helper.smooth(episode_returns_policy_gradient_rms, 10))
+    plt.plot(helper.smooth(episode_returns_policy_gradient_rmsng, 10))
 
     plt.title('Episode returns per episode')
-    plt.legend(['Natural Policy gradient (SGD)', 'Vanilla Policy Gradient (SGD)', 'Adam'])
+    # plt.legend(['Adam','RMS','RMSNG'])
+
+    plt.legend(['Natural Policy gradient (SGD)', 'Vanilla Policy Gradient (SGD)', 'Adam','RMS','RMSNG'])
     plt.show()
 
 

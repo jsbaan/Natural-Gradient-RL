@@ -1,8 +1,7 @@
 import torch
-from optimizer import Optimizer
+from torch.optim import Optimizer
 
-
-class RMSprop(Optimizer):
+class RMSProp_NG(Optimizer):
     """Implements RMSprop algorithm.
 
     Proposed by G. Hinton in his
@@ -25,7 +24,10 @@ class RMSprop(Optimizer):
 
     """
 
-    def __init__(self, params, lr=1e-2, alpha=0.99, eps=1e-8, weight_decay=0, momentum=0, centered=False):
+    def __init__(self, params, lr=1e-2, alpha=0.99, eps=1e-8, weight_decay=0, momentum=0, centered=False,ng = False):
+        self.f_sum = None
+        self.N = 0
+        self.ng = ng
         if not 0.0 <= lr:
             raise ValueError("Invalid learning rate: {}".format(lr))
         if not 0.0 <= eps:
@@ -38,10 +40,10 @@ class RMSprop(Optimizer):
             raise ValueError("Invalid alpha value: {}".format(alpha))
 
         defaults = dict(lr=lr, momentum=momentum, alpha=alpha, eps=eps, centered=centered, weight_decay=weight_decay)
-        super(RMSprop, self).__init__(params, defaults)
+        super(RMSProp_NG, self).__init__(params, defaults)
 
     def __setstate__(self, state):
-        super(RMSprop, self).__setstate__(state)
+        super(RMSProp_NG, self).__setstate__(state)
         for group in self.param_groups:
             group.setdefault('momentum', 0)
             group.setdefault('centered', False)
@@ -57,11 +59,48 @@ class RMSprop(Optimizer):
         if closure is not None:
             loss = closure()
 
+        ##### Compute natural gradients
+        if self.ng:
+            gradients,parameters = [],[]
+            for group in self.param_groups:
+                for p in group['params']:
+                    if p.grad is None:
+                        continue
+                    grad = p.grad.data
+                    gradients.append(grad.reshape(-1, 1))
+                    parameters.append(p.data.reshape(-1, 1))
+
+                parameter_vector = torch.cat(parameters, 0)
+                gradient_vector = torch.cat(gradients, 0)
+
+                # Add robustifying constant
+                robust_c = torch.eye(gradient_vector.shape[0]) * 1e-3
+                fisher_sample = torch.mm(gradient_vector, gradient_vector.t())
+                if self.N == 0:
+                    self.f_sum = fisher_sample
+                else:
+                    self.f_sum += fisher_sample
+                self.N += 1
+
+                # use f_sum/N as consistent estimate for F
+                fisher_inverse = (self.f_sum/self.N + robust_c).inverse()
+                parameter_vector = parameter_vector.squeeze(1)
+                natural_grad = torch.mm(fisher_inverse, gradient_vector).squeeze(1)
+
+        # RMSprop
         for group in self.param_groups:
+            i = 0
             for p in group['params']:
                 if p.grad is None:
                     continue
-                grad = p.grad.data
+
+                if self.ng:
+                    p_len = p.data.numel()#np.prod(p.data.shape)
+                    grad = natural_grad[i: i + p_len].reshape(p.data.shape)
+                    i += p_len
+                else:
+                    grad = p.grad.data
+
                 if grad.is_sparse:
                     raise RuntimeError('RMSprop does not support sparse gradients')
                 state = self.state[p]
