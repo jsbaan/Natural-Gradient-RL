@@ -9,7 +9,7 @@ import time
 from matplotlib import pyplot as plt
 import numpy as np
 from helper import Helper
-from SGD_NG import SGD
+from SGD_NG import SGD_NG
 helper = Helper()
 # Create environment
 env_name = "CartPole-v0"
@@ -36,7 +36,7 @@ def run_reinforce(env_name):
     reinforce = REINFORCE(model,learn_rate)
 
     # Natural gradient
-    optimizer_NG = SGD(model.parameters(), learn_rate)
+    optimizer_NG = SGD_NG(model.parameters(), learn_rate)
     # Perform REINFORCE on environment
     episode_returns_policy_gradient_NG = reinforce.run_episodes_policy_gradient(
         env, num_episodes, discount_factor, optimizer_NG)
