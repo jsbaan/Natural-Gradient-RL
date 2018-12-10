@@ -8,6 +8,8 @@ import torch.nn.functional as F
 from torch import optim
 from tqdm import tqdm as _tqdm
 
+seed = 20
+torch.manual_seed(seed)
 
 class REINFORCE():
     def __init__(self, policy, learn_rate):
@@ -35,8 +37,7 @@ class REINFORCE():
             s = s_next
             G += r * discount_factor ** steps
             steps += 1
-        # print length of each performed episode:
-        # print(steps)
+
         return episode, G
 
     def compute_reinforce_loss(self, episode, discount_factor):
@@ -65,10 +66,6 @@ class REINFORCE():
 
             # Compute loss
             loss = self.compute_reinforce_loss(episode, discount_factor)
-
-            # total_loss += loss
-            # if i % 10 ==0:
-            #     print(total_loss/(i+1))
 
             # Train network
             optimizer.zero_grad()

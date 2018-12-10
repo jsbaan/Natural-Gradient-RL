@@ -10,6 +10,7 @@ from matplotlib import pyplot as plt
 import numpy as np
 from helper import Helper
 from SGD_NG import SGD_NG
+
 helper = Helper()
 # Create environment
 env_name = "CartPole-v0"
@@ -20,67 +21,74 @@ def run_reinforce(env_name):
     env = gym.envs.make(env_name)
     num_actions = env.action_space.n
     num_states = env.reset().shape[0]
+    num_runs = 20
     num_episodes = 300
-    num_hidden = 128
+    num_hidden = 64
     discount_factor = 0.99
-    learn_rate = 0.01
-    seed = 42
-    random.seed(seed)
-    torch.manual_seed(seed)
-    env.seed(seed)
+    # seed = 20
+    # random.seed(seed)
+    # torch.manual_seed(seed)
+    # env.seed(seed)
     print("Number of states: ", num_states)
     print("Number of actions: ", num_actions)
 
-    # Initialize policy
-    model = PolicyNetwork(num_states, num_actions, num_hidden)
-    reinforce = REINFORCE(model,learn_rate)
-
-    optim_list = {
-        "SGD_NG": SGD_NG(model.parameters(), learn_rate),
-        "SGD": torch.optim.SGD(model.parameters(), learn_rate),
-        "ADAM": torch.optim.Adam(model.parameters(), learn_rate),
-    }
+    optim_list = ["SGD_NG", "SGD", "ADAM"]
+    optim_list = ["SGD_NG", "SGD_NG_1"]
 
     episode_return_list = {}
 
-    for optim_name, optim in optim_list.items():
-        print('--- %s ---' %optim_name)
-        episode_returns = reinforce.run_episodes_policy_gradient(
-            env, num_episodes, discount_factor, optim)
+    for optim in optim_list:
+        print('--- %s ---' % optim)
+        env = gym.envs.make(env_name)
 
-        episode_return_list[optim_name] = episode_returns
+        random.seed(10)
+        # run episodes
+        # init with right shape
+        episode_return_list[optim] = np.zeros((1, num_episodes))
+        # rerun num_runs times in order to validate
+        for i in range(num_runs):
+
+            env.seed(random.randint(0, 100))
+
+            # Initialize policy
+            model = PolicyNetwork(num_states, num_actions, num_hidden)
+            reinforce = REINFORCE(model, 0)
+
+            # Define optimizer:
+            if optim == "SGD_NG" or "SGD_NG_1":
+                learn_rate = 0.01
+                optimizer = SGD_NG(model.parameters(), learn_rate)
+            elif optim == "SGD":
+                learn_rate = 0.0001
+                optimizer = torch.optim.SGD(model.parameters(), learn_rate)
+            elif optim == "ADAM":
+                learn_rate = 0.01
+                optimizer = torch.optim.Adam(model.parameters(), learn_rate)
+            else:
+                raise ValueError('Not a known optimizer')
+
+            result = np.array(reinforce.run_episodes_policy_gradient(
+                env, num_episodes, discount_factor, optimizer))
+
+            # stack observations
+            episode_return_list[optim] = np.vstack((episode_return_list[optim], result))
+
+        # delete first row with zeros:
+        episode_return_list[optim] = episode_return_list[optim][1:, :]
 
     # Plot loss
+    smooth_ep = 10
     for optim_name, episode_returns in episode_return_list.items():
-        plt.plot(helper.smooth(episode_returns, 10), label=optim_name)
+        mean = np.mean(episode_returns, 0)
+        sd = np.sqrt(np.var(episode_returns, 0))
+        # fill (x-range, lower, upper)
+        plt.fill_between(helper.smooth(range(len(mean)), smooth_ep),
+                         helper.smooth(mean - sd, smooth_ep), helper.smooth(mean + sd, smooth_ep),
+                         alpha=0.5)
+        plt.plot(helper.smooth(range(len(mean)), smooth_ep), helper.smooth(mean, smooth_ep), label=str(optim_name + ' (SD)'))
         plt.title('Episode returns per episode')
         plt.legend()
     plt.show()
-
-
-def run_actorcritic(env_name):
-    # Define AC Hyperparamters
-    num_hidden = 128
-    num_envs = 16
-    max_steps = 10000
-    max_episodes = 10000
-    discount_factor = 0.8
-    lr_actor = 1e-3
-    lr_critic = 1e-3
-    seed = 42
-    envs = [gym.envs.make(env_name) for i in range(num_envs)]
-
-    # Initialize networks and model
-    actor = PolicyNetwork(num_hidden)
-    critic = ValueNetwork(num_hidden)
-    actorcritic = ActorCritic(actor, critic, lr_actor,lr_critic)
-
-    for i, env in enumerate(envs):
-        env.seed(seed + i)
-    torch.manual_seed(seed)
-
-    episode_durations, step_losses = actorcritic.run_episodes(
-        envs, max_episodes, max_steps, discount_factor)
 
 
 # run_actorcritic(env_name)

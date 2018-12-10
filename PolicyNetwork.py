@@ -1,6 +1,10 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
+
+# seed = 20
+# torch.manual_seed(seed)
+
 class PolicyNetwork(nn.Module):
 
     def __init__(self, num_states, num_actions, num_hidden=128):
