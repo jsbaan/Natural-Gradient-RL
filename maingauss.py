@@ -9,9 +9,9 @@ helper = Helper()
 
 
 param = 'sigma'
-episodes = 10000
+episodes = 5000
 
-NUMBER_OF_RUNS = 1
+NUMBER_OF_RUNS = 100
 
 
 if param == 'exp':
@@ -19,8 +19,8 @@ if param == 'exp':
 	alpha_nat = 0.2
 
 if param == "sigma":
-	alpha_van = 0.05
-	alpha_nat = 0.05
+	alpha_van = 0.1
+	alpha_nat = 0.1
 smooth = 10
 
 # alpha voor exp was 0.2 en 0.05 voor allebei
@@ -84,9 +84,10 @@ for t in range(NUMBER_OF_RUNS):
 
 		grad_mean, grad_sigma = derivative_sigma_param(model.std, model.mean, action, fisher_mean_sum, fisher_sigma_sum, fisher_N, fisher=False)
 		
-
-		model.std =  np.clip(model.std + alpha_van * grad_sigma * G, 1, -1)
-
+		if param == "sigma":
+			model.std =  np.clip(model.std + alpha_van * grad_sigma * G, 1, -1)
+		else:
+			model.std =  model.std + alpha_van * grad_sigma * G
 		model.mean = model.mean + alpha_van * grad_mean * G
 
 		loss = -G * log_action
@@ -106,8 +107,10 @@ for t in range(NUMBER_OF_RUNS):
 		G = rewardfunction(action)
 		returns_NG.append(G)
 		grad_mean, grad_sigma, fisher_mean_sum, fisher_sigma_sum, fisher_N = derivative_sigma_param(model.std, model.mean, action, fisher_mean_sum, fisher_sigma_sum, fisher_N, fisher=True)
-
-		model.std = np.clip(model.std + alpha_nat * grad_sigma * G, 1, -1)
+		if param == "sigma":
+			model.std =  np.clip(model.std + alpha_van * grad_sigma * G, 1, -1)
+		else:
+			model.std =  model.std + alpha_van * grad_sigma * G
 		model.mean = model.mean + alpha_nat * grad_mean * G
 		loss = - G * log_action
 
@@ -130,8 +133,13 @@ plt.plot(average_return_SGD, color="blue")
 plt.fill_between(np.arange(len(average_return_SGD)), average_return_SGD - var_return_SGD, average_return_SGD + var_return_SGD, color="blue", alpha=0.2)
 
 
-
-plt.title('Average Episode returns and loss per episode')
+if param == "exp":
+	text = r'$\sigma(\theta) = \exp(\theta)$'
+else:
+	text = r'$\sigma(\theta) = \theta^2$'
+plt.xlabel("Episodes")
+plt.ylabel("Average return")
+plt.title("Average return per episode for parametrization " + text + " (100 runs)")
 plt.legend(['Return Natural Policy gradient (SGD)', ' Return Vanilla Policy Gradient (SGD)'], loc = 4)
 plt.show()
 
