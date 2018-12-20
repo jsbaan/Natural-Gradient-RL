@@ -5,10 +5,12 @@ from helper import Helper
 from torch import nn
 import torch
 import torch.nn.functional as F
+plt.rcParams.update({'font.size': 18})
+
 helper = Helper()
 
 
-param = 'sigma'
+param = 'exp'
 episodes = 2000
 
 NUMBER_OF_RUNS = 50
@@ -147,8 +149,8 @@ else:
 
 plt.xlabel("Episodes")
 plt.ylabel("Average return")
-plt.title("Average return per episode for parametrization " + text + " with different learning rates (50 runs)")
-plt.legend(loc = 4)
+plt.title("Average return per episode for parametrization " + text + " \n with different learning rates (50 runs)")
+plt.legend(loc = 4, fontsize=10)
 plt.show()
 
 

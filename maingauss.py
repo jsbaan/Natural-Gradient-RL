@@ -76,7 +76,7 @@ for t in range(NUMBER_OF_RUNS):
 	losses = []
 	fisher_mean_sum = 0
 	fisher_sigma_sum = 0
-	fisher_N = 0 
+	fisher_N = np.zeros((2,2))
 	for i in range(episodes):
 		action, log_action = model.forward(sigma_param)
 		G = rewardfunction(action)

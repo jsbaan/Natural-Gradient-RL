@@ -13,7 +13,7 @@ from SGD_NG import SGD
 helper = Helper()
 # Create environment
 env_name = "CartPole-v0"
-NUMBER_OF_RUNS = 20
+NUMBER_OF_RUNS = 2
 
 def run_reinforce(env_name):
     # Define parameters
@@ -23,7 +23,8 @@ def run_reinforce(env_name):
     num_episodes = 300
     num_hidden = 128
     discount_factor = 0.99
-    learn_rate = 0.01
+    learn_rate = 0.03
+    learn_rate_VG = 0.01
     seed = 42
     random.seed(seed)
     torch.manual_seed(seed)
@@ -53,8 +54,8 @@ def run_reinforce(env_name):
 
         ## VANILLA GRADIENT
         model_VG = PolicyNetwork(num_states, num_actions, num_hidden)
-        reinforce = REINFORCE(model_VG,learn_rate)
-        optimizer_VG = torch.optim.SGD(model_VG.parameters(), learn_rate)
+        reinforce = REINFORCE(model_VG,learn_rate_VG)
+        optimizer_VG = torch.optim.SGD(model_VG.parameters(), learn_rate_VG)
         episode_returns_policy_gradient_VG, loss_SGD = reinforce.run_episodes_policy_gradient(
         env, num_episodes, discount_factor, optimizer_VG)
         SGD_results[t] = episode_returns_policy_gradient_VG
@@ -88,7 +89,7 @@ def run_reinforce(env_name):
     plt.plot(average_return_SGD, color="blue")
     plt.fill_between(np.arange(num_episodes), average_return_SGD - var_return_SGD, average_return_SGD + var_return_SGD, color="blue", alpha=0.2)
 
-    plt.title('Average Episode returns and loss per episode')
+    plt.title('Average Episode return per episode')
     plt.legend(['Return Natural Policy gradient (SGD)', ' Return Vanilla Policy Gradient (SGD)'])
     plt.show()
 
